@@ -1,97 +1,101 @@
 package org.black_ixx.bossshop.managers.item;
 
-import com.mojang.authlib.GameProfile;
-import com.mojang.authlib.properties.Property;
-import org.apache.commons.codec.binary.Base64;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.black_ixx.bossshop.core.BSBuy;
 import org.black_ixx.bossshop.managers.ClassManager;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.profile.PlayerProfile;
+import org.bukkit.profile.PlayerTextures;
 
-import java.lang.reflect.Field;
-import java.util.Collection;
-import java.util.Iterator;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 
 public class ItemDataPartCustomSkull extends ItemDataPart {
 
-    public static ItemStack transformSkull(ItemStack i, String input) {
-        if (input == null || input.isEmpty()) {
-            return i;
+    public static URL extractSkinUrl(String input) throws Exception {
+
+        if (input.startsWith("http://") || input.startsWith("https://")) {
+            return new URL(input);
         }
 
-        ItemMeta skullMeta = i.getItemMeta();
-        GameProfile profile = new GameProfile(UUID.randomUUID(), null);
-
-        Property property = input.contains("http://textures.minecraft.net/texture") ? getPropertyURL(input) : getProperty(input);
-        profile.getProperties().put("textures", property);
-        Field profileField = null;
         try {
-            profileField = skullMeta.getClass().getDeclaredField("profile");
-        } catch (NoSuchFieldException | SecurityException e) {
+            String decoded = new String(
+                    Base64.getDecoder().decode(input),
+                    StandardCharsets.UTF_8
+            );
+
+            JsonObject root = JsonParser.parseString(decoded).getAsJsonObject();
+            String url = root
+                    .getAsJsonObject("textures")
+                    .getAsJsonObject("SKIN")
+                    .get("url")
+                    .getAsString();
+
+            return new URL(url);
+
+        } catch (Exception ignore) {
+        }
+
+        return new URL("https://textures.minecraft.net/texture/" + input);
+    }
+
+
+    public static ItemStack transformSkull(ItemStack item, String input) {
+        if (input == null || input.isEmpty()) return item;
+        if (!(item.getItemMeta() instanceof SkullMeta meta)) return item;
+
+        try {
+            URL skinUrl = extractSkinUrl(input);
+
+            PlayerProfile profile = Bukkit.createPlayerProfile(UUID.randomUUID());
+            PlayerTextures textures = profile.getTextures();
+            textures.setSkin(skinUrl);
+
+            profile.setTextures(textures);
+            meta.setOwnerProfile(profile);
+            item.setItemMeta(meta);
+
+        } catch (Exception e) {
+            Bukkit.getLogger().warning("[BossShop] Failed to apply skull texture: " + input);
             e.printStackTrace();
         }
-        profileField.setAccessible(true);
-        try {
-            profileField.set(skullMeta, profile);
-        } catch (IllegalArgumentException | IllegalAccessException e) {
-            e.printStackTrace();
-        }
-        i.setItemMeta(skullMeta);
-        return i;
+
+        return item;
     }
 
-    private static Property getProperty(String texture) {
-        return new Property("textures", texture);
-    }
 
-    private static Property getPropertyURL(String url) {
-        byte[] encodedData = Base64.encodeBase64(String.format("{textures:{SKIN:{url:\"%s\"}}}", url).getBytes());
-        return new Property("textures", new String(encodedData));
-    }
+    public static String readSkullTexture(ItemStack item) {
+        if (!(item.getItemMeta() instanceof SkullMeta meta)) return null;
 
-    public static String readSkullTexture(ItemStack i) {
-        if (i.getType() == Material.PLAYER_HEAD) {
-            SkullMeta meta = (SkullMeta) i.getItemMeta();
-            Field profileField = null;
-            try {
-                profileField = meta.getClass().getDeclaredField("profile");
-                profileField.setAccessible(true);
+        PlayerProfile profile = meta.getOwnerProfile();
+        if (profile == null) return null;
 
-                GameProfile profile = (GameProfile) profileField.get(meta);
-                if (profile != null) {
-                    if (profile.getProperties() != null) {
-                        Collection<Property> properties = profile.getProperties().get("textures");
-                        if (properties != null) {
+        PlayerTextures textures = profile.getTextures();
+        if (textures == null || textures.getSkin() == null) return null;
 
-                            Iterator<Property> iterator = properties.iterator();
-                            if (iterator.hasNext()) {
-                                Property property = iterator.next();
-                                return property.getValue();
-                            }
-                        }
-                    }
-                }
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        return null;
+        return textures.getSkin().toString();
     }
 
     @Override
     public ItemStack transform(ItemStack item, String used_name, String argument) {
         if (!(item.getItemMeta() instanceof SkullMeta)) {
-            ClassManager.manager.getBugFinder().warn("Mistake in Config: Itemdata of type '" + used_name + "' with value '" + argument + "' can not be added to an item with material '" + item.getType().name() + "'. Don't worry I'll automatically transform the material into '" + Material.PLAYER_HEAD + ".");
+            ClassManager.manager.getBugFinder().warn(
+                    "Mistake in Config: Itemdata of type '" + used_name + "' with value '" + argument +
+                            "' can not be added to an item with material '" + item.getType().name() +
+                            "'. Transforming material into '" + Material.PLAYER_HEAD + "'."
+            );
             item.setType(Material.PLAYER_HEAD);
         }
-        item = transformSkull(item, argument);
-        return item;
+
+        return transformSkull(item, argument);
     }
 
     @Override
@@ -110,19 +114,16 @@ public class ItemDataPartCustomSkull extends ItemDataPart {
     }
 
     @Override
-    public List<String> read(ItemStack i, List<String> output) {
-        String skulltexture = readSkullTexture(i);
-        if (skulltexture != null) {
-            output.add("customskull:" + skulltexture);
+    public List<String> read(ItemStack item, List<String> output) {
+        String skullTexture = readSkullTexture(item);
+        if (skullTexture != null) {
+            output.add("customskull:" + skullTexture);
         }
         return output;
     }
 
-
     @Override
     public boolean isSimilar(ItemStack shop_item, ItemStack player_item, BSBuy buy, Player p) {
-        return true; //Custom skull textures do not matter
+        return true;
     }
-
-
 }

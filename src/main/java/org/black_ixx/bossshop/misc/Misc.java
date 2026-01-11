@@ -1,14 +1,13 @@
 package org.black_ixx.bossshop.misc;
 
 import org.black_ixx.bossshop.managers.misc.InputReader;
+import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class Misc {
 
@@ -69,6 +68,27 @@ public class Misc {
         return itemData;
     }
 
+    private static Sound resolveSound(String input) {
+
+        try {
+            return Sound.valueOf(input.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ignored) {
+        }
+
+        try {
+            NamespacedKey key = NamespacedKey.fromString(input.toLowerCase(Locale.ROOT));
+            if (key != null) {
+                for (Sound s : Sound.values()) {
+                    if (s.getKey().equals(key)) {
+                        return s;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        return null;
+    }
 
     /**
      * Play a sound for a player
@@ -76,28 +96,20 @@ public class Misc {
      * @param sound the sound to play
      */
     public static void playSound(Player p, String sound) {
-        if (sound != null) {
-            if (!sound.isEmpty()) {
-                String[] parts = sound.split(":");
-                Sound s = null;
-                for (Sound e : Sound.values()) {
-                    if (e.name().equalsIgnoreCase(parts[0])) {
-                        s = e;
-                        break;
-                    }
-                }
-                if (s != null) {
-                    float volume = 1;
-                    float pitch = 1;
-                    if (parts.length >= 2) {
-                        volume = (float) InputReader.getDouble(parts[1], 1);
-                    }
-                    if (parts.length >= 3) {
-                        pitch = (float) InputReader.getDouble(parts[2], 1);
-                    }
-                    p.playSound(p.getLocation(), s, volume, pitch);
-                }
-            }
+        if (sound == null || sound.isEmpty()) return;
+
+        String[] parts = sound.split(":");
+        String soundName = parts[0];
+
+        float volume = parts.length >= 2 ? (float) InputReader.getDouble(parts[1], 1) : 1f;
+        float pitch  = parts.length >= 3 ? (float) InputReader.getDouble(parts[2], 1) : 1f;
+
+        Sound bukkitSound = resolveSound(soundName);
+
+        if (bukkitSound != null) {
+            p.playSound(p.getLocation(), bukkitSound, volume, pitch);
+        } else {
+            Bukkit.getLogger().warning("[BossShop] Unknown sound: " + soundName);
         }
     }
 

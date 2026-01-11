@@ -39,7 +39,8 @@ public class ItemDataPartBanner extends ItemDataPart {
                     } catch (Exception e) {
                     }
                 }
-                meta.setBaseColor(basecolor);
+                //commented by thiagorigonatti's 0.0.1-RESCUED for (mc1.21.11) update
+                //meta.setBaseColor(basecolor);
                 meta.setPatterns(patterns);
             }
             item.setItemMeta(meta);

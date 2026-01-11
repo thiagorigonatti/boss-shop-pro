@@ -1,6 +1,6 @@
 name: BossShopPro
-version: ${project.version}
-api-version: 1.13
+version: $version
+api-version: 1.21
 description: The BOSS Shop Plugin *PRO VERSION*
 author: Black_ixx
 website: http://felix.neuby.de

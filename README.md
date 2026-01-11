@@ -13,13 +13,30 @@ It can not only be used to create shops but for every kind of menu. Here are jus
 More information about the project can be found here: [Link](https://www.spigotmc.org/resources/222/). The page includes a download-link as well.
 
 
-## Building BossShopPro
-A few notes regarding building BSP: the current state of the code, unfortunately, requires you to manually add (the jars of) a few other plugins to the project in order to be able to successfully build BSP. As BSP includes support for many different plugins, such as Kingdoms and EpicSpawners, you need to add those to the project (at least those, which I was not able to add directly via Maven). It requires some initial effort to download those plugins and add them to the project. 
-
-One (in my opinion a dirty one) workaround might be to just remove the code of those plugins you do not care about anyways, skipping the step where you have to download the jars. This has been done by a few people already. Without having tested the code myself, here is a commit of a fork, where it was already attempted to remove that code:
-https://github.com/Megumiovo/BossShopPro/commit/319e8c13dfab33b73c1856428e638d1bc1b63698
-
-
-
 ## API
 Information regarding the BossShopPro API can be found here: [Link](https://www.spigotmc.org/wiki/bossshoppro-api/).
+
+
+## RESCUED Fork of BossShopPro
+
+**Note:** 
+
+This is a **fork, RESCUED**, of BossShopPro. The main purpose of this fork was to:
+
+- Convert the build system from Maven to Gradle
+- Make the original dependencies (from the time) available in a local Gradle repository
+
+Some minor fixes were applied to make it work with Minecraft 1.21, which is the target API version.  
+Due to limited time, further fixes will be applied as needed on my own server**.
+
+**Important Warnings:**
+- Many integrations have not been tested, as I do not use most of them.
+- Some integrations may be outdated or non-functional.
+- There is a potential risk of undesired or even irreversible behavior when using certain features.
+
+**Usage on my server:**
+
+- The plugin works well for buying and selling items.
+- Seems compatible with PlayerShop GUI for creating player shops.
+
+> Use this fork with caution and always make backups before testing additional integrations.
